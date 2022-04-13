@@ -1,0 +1,39 @@
+version: "3.6"
+volumes:
+  postgresql_data:
+    driver: local
+  rs1:
+
+services:
+
+  # PostgreSQL database (ingestion)
+  postgresql-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    container_name: postgresql-db
+    ports:
+      - 5432:5432
+    volumes:
+      - 'postgresql_data:/bitnami/postgresql'
+      - './resources:/movielens_database/landing_zone'
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - './movielens_database/ddl:/docker-entrypoint-initdb.d/'
+      - './movielens_database/dml:/movielens_database/dml'
+
+    restart: always
+  # # Python service (analytics)
+
+
+
+  # # MongoDB Replica Set
+  # mongo:
+  #   image: "mongo:latest"
+  #   container_name: mongo
+  #   command: --replSet rs0 --oplogSize 128 --bind_ip 0.0.0.0
+  #   volumes:
+  #     - rs1:/data/db
+  #   ports:
+  #     - "27017:27017"
+  #   restart: always
