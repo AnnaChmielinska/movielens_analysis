@@ -15,34 +15,30 @@ set -e
 
 export WORKDIR=$(cd "$(dirname "${0}")"; pwd -P)
 cd "${WORKDIR}"
+
+export ENV_FILE=.env
 export DATABASE_NAME="movielens"
 
-# (
-# if lsof -Pi :27017 -sTCP:LISTEN -t >/dev/null ; then
-#     echo "Please terminate the local mongod on 27017"
-#     exit 1
-# fi
-# )
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "${ENV_FILE} file does not exist! Exiting..."
+  exit 1
+else
+  export $(grep -v '^#' ${ENV_FILE} | xargs)
+fi
 
-# echo '''
-# ==========================================================================================================
-# Buliding Docker containers ...
-# ==========================================================================================================
-# '''
-# docker-compose build
 
-echo '''
+echo "
 ==========================================================================================================
 Starting Docker ...
 ==========================================================================================================
-'''
+"
 docker-compose up -d
 
-echo '''
+echo "
 ==========================================================================================================
 Setting up containers environment ...
 
-'''
+"
 trap clean_up EXIT
 
 sleep 10
@@ -58,24 +54,29 @@ docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/mo
 docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/movielens_database/dml/02_load_ratings.sql'
 docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -c '\dt+'
 
-echo '''
+echo "
 ==========================================================================================================
 
-'''
+"
 
-echo '''
+echo "
 ==============================================================================================================
 Movies analytics
 
-'''
+"
 
-echo '''
-PostgreSQL - port 5432
-
+echo "
+PostgreSQL -- port ${POSTGRES_PORT}
+Spark Master -- port ${SPARK_MASTER_PORT}
+Jupyter notebook -- port ${JUPYTER_PORT}
 ==============================================================================================================
-'''
+"
 
 echo -e "\nExecuting main Spark application\n"
-
+# docker-compose exec spark-master apk add py3-numpy
+docker-compose exec spark-master \
+    /spark/bin/spark-submit \
+    --packages org.postgresql:postgresql:42.2.5 \
+    movies_analysis/main.py
 
 read -r -d '' _ </dev/tty

@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+.vscode
 venv
 .pytest_cache
 __pycache__
@@ -7,3 +8,4 @@ __pycache__
 requirements
 pipfile
 pipfile.loc
+logs.txt

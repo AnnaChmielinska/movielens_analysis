@@ -2,38 +2,69 @@ version: "3.6"
 volumes:
   postgresql_data:
     driver: local
-  rs1:
+  shared_hdfs_workspace:
+    name: "hadoop-distributed-file-system"
+    driver: local
 
 services:
 
   # PostgreSQL database (ingestion)
   postgresql-db:
-    image: postgres:13
+    image: postgres:${POSTGRES_TAG}
+    container_name: postgresql-db
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    container_name: postgresql-db
     ports:
-      - 5432:5432
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
     volumes:
       - 'postgresql_data:/bitnami/postgresql'
       - './resources:/movielens_database/landing_zone'
-      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
       - './movielens_database/ddl:/docker-entrypoint-initdb.d/'
       - './movielens_database/dml:/movielens_database/dml'
-
     restart: always
-  # # Python service (analytics)
 
+  # Spark standalone cluster (analytics)
+  spark-master:
+    image: bde2020/spark-master:${SPARK_TAG}
+    container_name: spark-master
+    ports:
+      - ${SPARK_MASTER_PORT}:${SPARK_MASTER_PORT}
+      - 7080:7077
+    volumes:
+      - shared_hdfs_workspace:/opt/workspace
+      - ./movies_analysis:/opt/workspace/movies_analysis
+    working_dir: /opt/workspace
+  spark-worker-1:
+    image: bde2020/spark-worker:${SPARK_TAG}
+    container_name: spark-worker-1
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1g
+    ports:
+      - 8081:8081
+    volumes:
+      - shared_hdfs_workspace:/opt/workspace
+    depends_on:
+      - spark-master
+  spark-worker-2:
+    image: bde2020/spark-worker:${SPARK_TAG}
+    container_name: spark-worker-2
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1g
+    ports:
+      - 8082:8082
+    volumes:
+      - shared_hdfs_workspace:/opt/workspace
+    depends_on:
+      - spark-master
 
-
-  # # MongoDB Replica Set
-  # mongo:
-  #   image: "mongo:latest"
-  #   container_name: mongo
-  #   command: --replSet rs0 --oplogSize 128 --bind_ip 0.0.0.0
-  #   volumes:
-  #     - rs1:/data/db
-  #   ports:
-  #     - "27017:27017"
-  #   restart: always
+  # Jupyter notebook
+  jupyter-notebook:
+    image: jupyter/minimal-notebook:${JUPYTER_TAG}
+    container_name: jupyter-notebook
+    ports:
+      - ${JUPYTER_PORT}:${JUPYTER_PORT}
+    command: [ "start-notebook.sh", "--NotebookApp.token='jupyter'" ]
+    restart: always
