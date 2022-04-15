@@ -43,8 +43,6 @@ Setting up containers environment ...
 "
 trap clean_up EXIT
 
-sleep 10
-
 echo -e "\nLoading movielens data into tables.\n"
 docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -c '\dt+'
 docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/movielens_database/dml/01_load_movies.sql'
@@ -73,10 +71,9 @@ Jupyter notebook -- port ${JUPYTER_PORT}
 #docker jupyter-notebook exec wget https://repo1.maven.org/maven2/org/checkerframework/checker-qual/3.5.0/checker-qual-3.5.0.jar
 
 echo -e "\nExecuting main Spark application\n"
-# docker-compose exec spark-master apk add py3-numpy
 docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec spark-master \
     /spark/bin/spark-submit \
     --packages org.postgresql:postgresql:42.2.19 \
     movies_analysis/main.py
 
-read -r -d '' _ </dev/tty
+# read -r -d '' _ </dev/tty

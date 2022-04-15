@@ -33,4 +33,4 @@ ignore-classes = pytest
 ignore = setup.py
 
 [FORMAT]
-max-line-length=90
+max-line-length=120
