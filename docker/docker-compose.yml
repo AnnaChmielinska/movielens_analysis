@@ -12,6 +12,7 @@ services:
   postgresql-db:
     image: postgres:${POSTGRES_TAG}
     container_name: postgresql-db
+    hostname: postgresql-db
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -19,21 +20,22 @@ services:
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
     volumes:
       - 'postgresql_data:/bitnami/postgresql'
-      - './resources:/movielens_database/landing_zone'
-      - './movielens_database/ddl:/docker-entrypoint-initdb.d/'
-      - './movielens_database/dml:/movielens_database/dml'
+      - '../resources:/movielens_database/landing_zone'
+      - '../movielens_database/ddl:/docker-entrypoint-initdb.d/'
+      - '../movielens_database/dml:/movielens_database/dml'
     restart: always
 
   # Spark standalone cluster (analytics)
   spark-master:
     image: bde2020/spark-master:${SPARK_TAG}
     container_name: spark-master
+    hostname: spark-master
     ports:
-      - ${SPARK_MASTER_PORT}:${SPARK_MASTER_PORT}
+      - ${SPARK_MASTER_UI_PORT}:${SPARK_MASTER_UI_PORT}
       - 7080:7077
     volumes:
       - shared_hdfs_workspace:/opt/workspace
-      - ./movies_analysis:/opt/workspace/movies_analysis
+      - ../movies_analysis:/opt/workspace/movies_analysis
     working_dir: /opt/workspace
   spark-worker-1:
     image: bde2020/spark-worker:${SPARK_TAG}
@@ -62,9 +64,19 @@ services:
 
   # Jupyter notebook
   jupyter-notebook:
-    image: jupyter/minimal-notebook:${JUPYTER_TAG}
+    image: jupyter/pyspark-notebook:${JUPYTER_TAG}
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.jupyter
+    #   args:
+    #     JUPYTER_TAG: ${JUPYTER_TAG}
     container_name: jupyter-notebook
+    environment:
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      # - PYSPARK_SUBMIT_ARGS="--packages org.postgresql:postgresql:42.2.19 --driver-class-path /home/jovyan/.ivy2/jars/org.postgresql_postgresql-42.2.19.jar pyspark-shell"
     ports:
       - ${JUPYTER_PORT}:${JUPYTER_PORT}
-    command: [ "start-notebook.sh", "--NotebookApp.token='jupyter'" ]
+    volumes:
+      - ../movies_analysis:/home/jovyan/work
+    command: [ "start-notebook.sh", "--NotebookApp.token=$JUPYTER_TOKEN" ]
     restart: always

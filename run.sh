@@ -7,8 +7,8 @@ fi
 
 function clean_up {
     echo -e "\nTearing down the Docker environment, please wait.\n"
-    docker-compose logs > logs.txt
-    docker-compose down -v #--rmi all --remove-orphans
+    docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} logs > logs.txt
+    docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} down -v --rmi all --remove-orphans
 }
 
 set -e
@@ -16,7 +16,9 @@ set -e
 export WORKDIR=$(cd "$(dirname "${0}")"; pwd -P)
 cd "${WORKDIR}"
 
-export ENV_FILE=.env
+export DOCKER_PATH=docker
+export DOCKER_COMPOSE_FILE_PATH="${DOCKER_PATH}/docker-compose.yml"
+export ENV_FILE="${DOCKER_PATH}/.env"
 export DATABASE_NAME="movielens"
 
 if [ ! -f "${ENV_FILE}" ]; then
@@ -32,7 +34,7 @@ echo "
 Starting Docker ...
 ==========================================================================================================
 "
-docker-compose up -d
+docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} up -d
 
 echo "
 ==========================================================================================================
@@ -43,16 +45,11 @@ trap clean_up EXIT
 
 sleep 10
 
-# echo -e "\nCreating movielens database structures.\n"
-# docker-compose exec postgresql-db psql -h localhost -U postgres -f '/movielens_database/ddl/create_db.sql'
-# docker-compose exec postgresql-db psql -h localhost -U postgres -f '/movielens_database/ddl/create_movies.sql'
-# docker-compose exec postgresql-db psql -h localhost -U postgres -f '/movielens_database/ddl/create_ratings.sql'
-docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -c '\dt+'
-
 echo -e "\nLoading movielens data into tables.\n"
-docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/movielens_database/dml/01_load_movies.sql'
-docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/movielens_database/dml/02_load_ratings.sql'
-docker-compose exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -c '\dt+'
+docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -c '\dt+'
+docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/movielens_database/dml/01_load_movies.sql'
+docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -f '/movielens_database/dml/02_load_ratings.sql'
+docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec postgresql-db psql -d "${DATABASE_NAME}" -U postgres -c '\dt+'
 
 echo "
 ==========================================================================================================
@@ -67,16 +64,19 @@ Movies analytics
 
 echo "
 PostgreSQL -- port ${POSTGRES_PORT}
-Spark Master -- port ${SPARK_MASTER_PORT}
+Spark Master -- port ${SPARK_MASTER_UI_PORT}
 Jupyter notebook -- port ${JUPYTER_PORT}
 ==============================================================================================================
 "
 
+#docker jupyter-notebook exec wget https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.19/postgresql-42.2.19.jar
+#docker jupyter-notebook exec wget https://repo1.maven.org/maven2/org/checkerframework/checker-qual/3.5.0/checker-qual-3.5.0.jar
+
 echo -e "\nExecuting main Spark application\n"
 # docker-compose exec spark-master apk add py3-numpy
-docker-compose exec spark-master \
+docker-compose -f ${DOCKER_COMPOSE_FILE_PATH} exec spark-master \
     /spark/bin/spark-submit \
-    --packages org.postgresql:postgresql:42.2.5 \
+    --packages org.postgresql:postgresql:42.2.19 \
     movies_analysis/main.py
 
 read -r -d '' _ </dev/tty

@@ -47,7 +47,7 @@ bash run.sh
 To stop Docker containers and remove container and related resources run:
 
 ```
-docker-compose down -v --rmi all --remove-orphans
+docker-compose -f docker/docker-compose.yml down -v --rmi all --remove-orphans
 <venv_name>/bin/bin/python3 -m pip uninstall -r requirements.txt -y
 deactivate
 ```
