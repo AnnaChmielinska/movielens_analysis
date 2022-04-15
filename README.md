@@ -9,7 +9,7 @@ Application runs in docker compose and consists of:
 - Spark with a master node (port `8080`) and two worker nodes listening on ports `8081` and `8082` respectively.
 - Jupyter notebook server (port `8888`)
 
-The PostgreSQL is used to ingest data from `/resources`.
+Data from `/resources` is ingested to PostgreSQL. Data analysis is done on Spark cluster.
 
 __Note__: You may have to check if ports mentioned above are open (you can change port values in `.env` file).
 
@@ -26,18 +26,12 @@ To setup environment run:
 ```
 python3 -m venv <venv_name>
 source <venv_name>/bin/activate
-<venv_name>/bin/bin/python3 -m pip install -r requirements.txt
+<venv_name>/bin/python3 -m pip install -r requirements.txt
 ```
 To start docker containers run:
 
 ```
 bash run.sh
-```
-
-Or just run:
-
-```
-make run
 ```
 
 ## How to clean up
